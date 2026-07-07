@@ -10,6 +10,7 @@ import re
 import tempfile
 import threading
 import warnings
+from errno import ENOENT
 from unittest import mock
 
 import pytest
@@ -968,26 +969,36 @@ class TestRequests:
 
     def test_invalid_ca_certificate_path(self, httpbin_secure):
         INVALID_PATH = "/garbage"
-        with pytest.raises(IOError) as e:
+        with pytest.raises(FileNotFoundError) as e:
             requests.get(httpbin_secure(), verify=INVALID_PATH)
+        assert e.value.errno == ENOENT
+        assert e.value.args[1] == "Could not find a suitable TLS CA certificate bundle, invalid path"
+        assert e.value.filename == INVALID_PATH
         assert (
             str(e.value)
-            == f"Could not find a suitable TLS CA certificate bundle, invalid path: {INVALID_PATH}"
+            == f"[Errno {ENOENT}] Could not find a suitable TLS CA certificate bundle, invalid path: '{INVALID_PATH}'"
         )
 
     def test_invalid_ssl_certificate_files(self, httpbin_secure):
         INVALID_PATH = "/garbage"
-        with pytest.raises(IOError) as e:
+        with pytest.raises(FileNotFoundError) as e:
             requests.get(httpbin_secure(), cert=INVALID_PATH)
+        assert e.value.errno == ENOENT
+        assert e.value.args[1] == "Could not find the TLS certificate file, invalid path"
+        assert e.value.filename == INVALID_PATH
         assert (
             str(e.value)
-            == f"Could not find the TLS certificate file, invalid path: {INVALID_PATH}"
+            == f"[Errno {ENOENT}] Could not find the TLS certificate file, invalid path: '{INVALID_PATH}'"
         )
 
-        with pytest.raises(IOError) as e:
+        with pytest.raises(FileNotFoundError) as e:
             requests.get(httpbin_secure(), cert=(".", INVALID_PATH))
-        assert str(e.value) == (
-            f"Could not find the TLS key file, invalid path: {INVALID_PATH}"
+        assert e.value.errno == ENOENT
+        assert e.value.args[1] == "Could not find the TLS key file, invalid path"
+        assert e.value.filename == INVALID_PATH
+        assert (
+            str(e.value)
+            == f"[Errno {ENOENT}] Could not find the TLS key file, invalid path: '{INVALID_PATH}'"
         )
 
     @pytest.mark.parametrize(
